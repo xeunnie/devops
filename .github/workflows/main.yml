@@ -31,15 +31,34 @@ jobs:
           ./gradlew docker
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: actions-hub/docker/login@master
         with:
           username: ${{ secrets.REMOTE_USER_NAME }}
           password: ${{ secrets.REMOTE_PASSWORD }}
-      - name: push
-        uses: docker/build-push-action@v6
+
+      - name: Push Frontend Docker image
+        uses: actions-hub/docker@master
         with:
-          push: true
-          tags: plumxeun98/frontend:1.5
+          args: push plumxeun98/frontend:1.5
+
+      - name: restart frontend container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 192.168.0.31
+          username: test
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            kubectl apply -f - <<EOF
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: frontend
+            spec:
+              containers:
+                - name: frontend
+                  image: plumxeun98/frontend:1.5
+            EOF
 
   backend-deploy:
     if: github.ref == 'refs/heads/backend'
@@ -67,12 +86,31 @@ jobs:
           ./gradlew docker -Pplatform=backend
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: actions-hub/docker/login@master
         with:
           username: ${{ secrets.REMOTE_USER_NAME }}
           password: ${{ secrets.REMOTE_PASSWORD }}
+
       - name: push
-        uses: docker/build-push-action@v6
+        uses: actions-hub/docker@master
         with:
-          push: true
-          tags: plumxeun98/backend:1.5
+          args: push plumxeun98/backend:1.5
+
+      - name: restart backend container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 192.168.0.31
+          username: test
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            kubectl apply -f - <<EOF
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: backend
+            spec:
+              containers:
+                - name: backend
+                  image: plumxeun98/backend:1.5
+            EOF
