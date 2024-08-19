@@ -28,28 +28,38 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+def platform = project.hasProperty('platform') ? project.property('platform') : "frontend"
+
 docker {
-    name 'seung.follow/test:' + version
-    files tasks.bootJar.outputs.files
-    buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
-    dockerfile file('Dockerfile')
+    if (platform == "frontend") {
+        name "seung.follow/frontend:" + version
+        files "frontend/dist"
+        buildArgs(['DIST_DIR': "/"])
+        dockerfile file('frontend/Dockerfile')
+    } else {
+        name "seung.follow/backend:" + version
+        files tasks.bootJar.outputs.files
+        buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
+        dockerfile file('Dockerfile')
+    }
 }
 
-//task buildFrontend(type: Exec) {
-//    workingDir '../frontend'
-//    commandLine '/Users/chloechoi/.nvm/versions/node/v22.5.1/lib/node_modules/npm/bin/npm', 'run', 'build'
-//}
-
-task buildDocker {
-    dependsOn 'docker'
-    doLast {
-        exec {
-            commandLine './gradlew', 'docker'
-        }
+task buildDocker(type: Exec) {
+    workingDir project.rootDir
+    if (platform == "frontend") {
+        dependsOn 'buildFrontend'
+        commandLine './gradlew', 'docker', '-Pplatform=frontend'
+    } else {
+        commandLine './gradlew', 'docker', '-Pplatform=backend'
     }
 }
 
 task dockerComposeUp(type: Exec, dependsOn: buildDocker) {
     environment 'DOCKER_IMAGE_TAG', version
     commandLine 'docker-compose', 'up', '--build', '-d'
+}
+
+task buildFrontend(type: Exec) {
+    workingDir 'frontend'
+    commandLine '/Users/chloechoi/.nvm/versions/node/v22.5.1/lib/node_modules/npm/bin/npm', 'run', 'build'
 }
