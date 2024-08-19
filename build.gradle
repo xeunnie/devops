@@ -35,13 +35,13 @@ docker {
     dockerfile file('Dockerfile')
 }
 
-task buildFrontend(type: Exec) {
-    workingDir '../frontend'
-    commandLine '/Users/chloechoi/.nvm/versions/node/v22.5.1/lib/node_modules/npm/bin/npm', 'run', 'build'
-}
+//task buildFrontend(type: Exec) {
+//    workingDir '../frontend'
+//    commandLine '/Users/chloechoi/.nvm/versions/node/v22.5.1/lib/node_modules/npm/bin/npm', 'run', 'build'
+//}
 
 task buildDocker {
-    dependsOn 'docker', 'buildFrontend'
+    dependsOn 'docker'
     doLast {
         exec {
             commandLine './gradlew', 'docker'
