@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.2'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'com.palantir.docker' version '0.36.0'
+}
+
+group = 'seung.follow'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+docker {
+    name 'seung.follow/test:' + version
+    files tasks.bootJar.outputs.files
+    buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
+    dockerfile file('Dockerfile')
+}
+
+task buildFrontend(type: Exec) {
+    workingDir '../frontend'
+    commandLine '/Users/chloechoi/.nvm/versions/node/v22.5.1/lib/node_modules/npm/bin/npm', 'run', 'build'
+}
+
+task buildDocker {
+    dependsOn 'docker', 'buildFrontend'
+    doLast {
+        exec {
+            commandLine './gradlew', 'docker'
+        }
+    }
+}
+
+task dockerComposeUp(type: Exec, dependsOn: buildDocker) {
+    environment 'DOCKER_IMAGE_TAG', version
+    commandLine 'docker-compose', 'up', '--build', '-d'
+}
